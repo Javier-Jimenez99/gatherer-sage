@@ -1,5 +1,5 @@
-# arcane-sage
-AI chatbot to answer mtg ruling questions
+# gatherer-sage
+AI chatbot to answer MTG ruling questions
 
 ## Sources
 ### Datasets
