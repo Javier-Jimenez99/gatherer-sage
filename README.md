@@ -5,6 +5,7 @@ AI chatbot to answer MTG ruling questions
 ### Datasets
 - MTG rules: [https://media.wizards.com/2024/downloads/MagicCompRules%2004102024.txt](https://media.wizards.com/2024/downloads/MagicCompRules%2004102024.txt)
 - Ruling Subreddit: [https://www.reddit.com/r/mtgrules/](https://www.reddit.com/r/mtgrules/)
+- MTG non-oficial rules: [https://blogs.magicjudges.org/o/rules-policy-documents/](https://blogs.magicjudges.org/o/rules-policy-documents/)
 - MTG Salvation Forum: [https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings](https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings)
 - Rules Q&A:[https://rulesguru.net/](https://rulesguru.net/)
 
