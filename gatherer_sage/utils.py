@@ -4,27 +4,29 @@ import pandas as pd
 import json
 import numpy as np
 
+
 def clean_text(text):
     # Protect card names in double brackets
-    card_names = re.findall(r'\[\[.*?\]\]', text)
-    card_dict = {f'<<{i}>>': card_names[i] for i in range(len(card_names))}
+    card_names = re.findall(r"\[\[.*?\]\]", text)
+    card_dict = {f"<<{i}>>": card_names[i] for i in range(len(card_names))}
     for key, value in card_dict.items():
         text = text.replace(value, key)
-    
+
     # Remove Markdown URLs
-    text = re.sub(r'\[.*?\]\(.*?\)', '', text)
-    
+    text = re.sub(r"\[.*?\]\(.*?\)", "", text)
+
     # Remove standalone URLs
-    text = re.sub(r'http[s]?://\S+', '', text)
-    
+    text = re.sub(r"http[s]?://\S+", "", text)
+
     # Remove Markdown syntax (bold, italic)
-    text = re.sub(r'\*{1,2}|_{1,2}', '', text)
-    
+    text = re.sub(r"\*{1,2}|_{1,2}", "", text)
+
     # Restore card names
     for key, value in card_dict.items():
         text = text.replace(key, value)
 
     return text
+
 
 def get_pdf_content(documents):
     raw_texts = []
@@ -34,12 +36,13 @@ def get_pdf_content(documents):
         pdf_reader = PdfReader(document)
         for page in pdf_reader.pages:
             raw_text += page.extract_text()
-        
+
         raw_texts.append(clean_text(raw_text))
 
     return raw_texts
 
-def load_cards_df(data_path:str="data/AtomicCards.json"):
+
+def load_cards_df(data_path: str = "data/AtomicCards.json"):
     all_cards_json = json.load(open(data_path, encoding="utf8"))["data"]
 
     all_cards = []
@@ -58,11 +61,12 @@ def load_cards_df(data_path:str="data/AtomicCards.json"):
             all_cards.append(parsed_card)
 
     df = pd.DataFrame(all_cards)
-        
+
     renames = {col: col.strip() for col in df.columns}
     df = df.rename(columns=renames)
 
     return df
+
 
 def parse_mana_cost(mana_cost):
     mana_parsed = ""
@@ -92,6 +96,7 @@ def parse_mana_cost(mana_cost):
 
     return mana_parsed
 
+
 def card_texts(cards_df):
     groups = cards_df.groupby("name")
     all_texts = []
@@ -104,7 +109,7 @@ def card_texts(cards_df):
                 if not pd.isna(variation["manaCost"])
                 else ""
             )
-            mana_cost = f'Mana Cost: {mana_cost}'
+            mana_cost = f"Mana Cost: {mana_cost}"
 
             card_type = f'Type: {variation["type"]}'
 
@@ -112,7 +117,7 @@ def card_texts(cards_df):
             mana_in_text = re.findall(r"\{.*\}", text)
             for mana in mana_in_text:
                 text = text.replace(mana, parse_mana_cost(mana))
-            text = f'Text: {text}'
+            text = f"Text: {text}"
 
             if not variation["power"] is np.nan or not variation["toughness"] is np.nan:
                 stats = f"Stats: {variation['power']} power, {variation['toughness']} toughness"
@@ -122,12 +127,14 @@ def card_texts(cards_df):
             rulings = variation["rulings"]
             if not rulings is np.nan:
                 rules = f"Rules:\n"
-                for i,rule in enumerate(rulings):
+                for i, rule in enumerate(rulings):
                     rules += f"{i+1}. {rule['text']}\n"
             else:
                 rules = ""
 
-            input_text = ("\n".join([name, mana_cost, card_type, text, stats,rules])).strip()
+            input_text = (
+                "\n".join([name, mana_cost, card_type, text, stats, rules])
+            ).strip()
 
             all_texts.append(clean_text(input_text))
 
