@@ -132,8 +132,18 @@ def card_texts(cards_df):
             else:
                 rules = ""
 
+            legalities_texts = []
+            legalities = variation["legalities"]
+            for key, val in legalities.items():
+                if val == "Legal":
+                    legalities_texts.append(f" {key}")
+
+            legalities_text = f"Legal in:{','.join(legalities_texts)}"
+
             input_text = (
-                "\n".join([name, mana_cost, card_type, text, stats, rules])
+                "\n".join(
+                    [name, mana_cost, card_type, text, stats, rules, legalities_text]
+                )
             ).strip()
 
             all_texts.append(clean_text(input_text))
