@@ -1,13 +1,18 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document as LangchainDocument
 import os
-from langchain.vectorstores import FAISS
+from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores.utils import DistanceStrategy
 from ragatouille import RAGPretrainedModel
 
 from transformers import AutoTokenizer
 from gatherer_sage.utils import get_pdf_content, load_cards_df, card_texts
+import pandas as pd
+import typer
+from tqdm.auto import tqdm
+
+tqdm.pandas()
 
 
 class RAG:
@@ -30,7 +35,9 @@ class RAG:
             },  # Set `True` for cosine similarity
         )
 
-        self.reranker = RAGPretrainedModel.from_pretrained(reranker_model_path)
+        self.reranker = RAGPretrainedModel.from_pretrained(
+            reranker_model_path, verbose=0
+        )
 
         if vector_database_path is None:
 
@@ -130,3 +137,38 @@ class RAG:
         )
 
         return context
+
+
+def main(
+    data_path: str = "data/reddit/reddit_qa_dataset.csv",
+    data_path_with_context: str = "data/reddit/reddit_qa_dataset_with_context.csv",
+    vector_database_path: str = "data/rag_vector_db",
+    batch_size: int = 50,
+):
+    # Inicialización de RAG con el path proporcionado
+    rag = RAG(vector_database_path=vector_database_path)
+
+    # Cargar el DataFrame
+    df = pd.read_csv(data_path)
+
+    # Preparar el archivo de salida: vaciar si ya existe
+    pd.DataFrame(columns=df.columns.tolist() + ["context"]).to_csv(
+        data_path_with_context, index=False
+    )
+
+    # Procesar el DataFrame por partes
+    for start in tqdm(range(0, len(df), batch_size)):
+        end = start + batch_size
+        # Aplicar la función para recuperar el contexto
+        df_slice = df.iloc[start:end].copy()
+        df_slice["context"] = df_slice.apply(
+            lambda x: rag.retrieve_context(x["question"]), axis=1
+        )
+
+        # Guardar en CSV en modo append
+        df_slice.to_csv(data_path_with_context, mode="a", header=False, index=False)
+        print(f"Batch from {start} to {end} processed and saved.")
+
+
+if __name__ == "__main__":
+    typer.run(main)
