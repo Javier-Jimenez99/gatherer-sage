@@ -10,7 +10,9 @@ AI chatbot to answer MTG ruling questions
   - Digital Infraction Procedure Guide: [https://assets.ctfassets.net/ryplwhabvmmk/7ndnTO3hk658elrr77KJHC/b0de8c6a2d41a3b2934c14d35dc6d40d/Magic_Digital_IPG_Update_11152021.pdf](https://assets.ctfassets.net/ryplwhabvmmk/7ndnTO3hk658elrr77KJHC/b0de8c6a2d41a3b2934c14d35dc6d40d/Magic_Digital_IPG_Update_11152021.pdf)
   - Digital Tournament Rules: [https://assets.ctfassets.net/ryplwhabvmmk/5HYQjgeT4YBN7pvVZk2hyY/d40ebd6f80057637df726398ba2bb72c/Magic_Digital_Tournament_Rules_Update_11152021.pdf](https://assets.ctfassets.net/ryplwhabvmmk/5HYQjgeT4YBN7pvVZk2hyY/d40ebd6f80057637df726398ba2bb72c/Magic_Digital_Tournament_Rules_Update_11152021.pdf)
   - Judging at Regular Rules Enforcement Level: [https://media.wizards.com/2022/wpn/marketing_materials/wpn/mtg_jar_25sep20_en.pdf](https://media.wizards.com/2022/wpn/marketing_materials/wpn/mtg_jar_25sep20_en.pdf)
-- Ruling Subreddit: [https://www.reddit.com/r/mtgrules/](https://www.reddit.com/r/mtgrules/)
+- Ruling Subreddit: 
+  - [https://www.reddit.com/r/mtgrules/](https://www.reddit.com/r/mtgrules/)
+  - [https://www.reddit.com/r/askajudge](https://www.reddit.com/r/askajudge)
 - MTG Salvation Forum: [https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings](https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings)
 - Rules Q&A:[https://rulesguru.net/](https://rulesguru.net/)
 
@@ -28,3 +30,10 @@ AI chatbot to answer MTG ruling questions
 - VRAM requirements: [https://www.reddit.com/r/LocalLLaMA/comments/18o5u0k/helpful_vram_requirement_table_for_qlora_lora_and/](https://www.reddit.com/r/LocalLLaMA/comments/18o5u0k/helpful_vram_requirement_table_for_qlora_lora_and/)
 - QLora example: [https://dassum.medium.com/fine-tune-large-language-model-llm-on-a-custom-dataset-with-qlora-fb60abdeba07](https://dassum.medium.com/fine-tune-large-language-model-llm-on-a-custom-dataset-with-qlora-fb60abdeba07)
 - Fine-tuning example: [https://github.com/huggingface/blog/blob/main/Lora-for-sequence-classification-with-Roberta-Llama-Mistral.md](https://github.com/huggingface/blog/blob/main/Lora-for-sequence-classification-with-Roberta-Llama-Mistral.md)
+
+## Setup
+
+Installation Advices:
+```
+FLASH_ATTENTION_SKIP_CUDA_BUILD=TRUE pip install flash-attn --no-build-isolation`
+```
