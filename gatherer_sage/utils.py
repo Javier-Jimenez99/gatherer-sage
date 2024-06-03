@@ -46,6 +46,8 @@ def clean_text(text):
     # Eliminar múltiples espacios dejando solo uno
     text = re.sub(r" +", " ", text)
 
+    text = re.sub(r"^\>", "", text, flags=re.MULTILINE)
+
     return text
 
 
