@@ -1,29 +1,50 @@
 from PyPDF2 import PdfReader
-import re
 import pandas as pd
 import json
 import numpy as np
 
 
+import re
+from html import unescape
+
+
 def clean_text(text):
-    # Protect card names in double brackets
+    # Decodificar entidades HTML
+    text = unescape(text)
+
+    # Proteger nombres de cartas en doble corchetes
     card_names = re.findall(r"\[\[.*?\]\]", text)
     card_dict = {f"<<{i}>>": card_names[i] for i in range(len(card_names))}
     for key, value in card_dict.items():
         text = text.replace(value, key)
 
-    # Remove Markdown URLs
+    # Eliminar URLs de Markdown
     text = re.sub(r"\[.*?\]\(.*?\)", "", text)
 
-    # Remove standalone URLs
+    # Eliminar URLs independientes
     text = re.sub(r"http[s]?://\S+", "", text)
 
-    # Remove Markdown syntax (bold, italic)
+    # Eliminar sintaxis de Markdown (negrita, cursiva)
     text = re.sub(r"\*{1,2}|_{1,2}", "", text)
 
-    # Restore card names
+    # Eliminar líneas de separadores de Markdown
+    text = re.sub(r"^---\s*$", "", text, flags=re.MULTILINE)
+
+    # Restaurar nombres de cartas
     for key, value in card_dict.items():
         text = text.replace(key, value)
+
+    # Reemplazar tabulaciones y otros espacios por un solo espacio
+    text = re.sub(r"[ \t]+", " ", text)
+
+    # Eliminar múltiples saltos de línea dejando solo uno
+    text = re.sub(r"\n+", "\n", text)
+
+    # Eliminar espacios antes y después de saltos de línea
+    text = re.sub(r" *\n *", "\n", text)
+
+    # Eliminar múltiples espacios dejando solo uno
+    text = re.sub(r" +", " ", text)
 
     return text
 

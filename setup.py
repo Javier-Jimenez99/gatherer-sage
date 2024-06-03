@@ -20,6 +20,11 @@ setuptools.setup(
         "faiss-gpu",
         "bitsandbytes",
         "accelerate",
-        "ragatouille"
+        "ragatouille",
+        "evaluate",
+        "rouge_score",
+        "wandb",
+        "einops",  # phi
+        "pytest",  # phi
     ],
 )
