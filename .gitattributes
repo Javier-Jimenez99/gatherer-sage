@@ -4,3 +4,4 @@ data/AtomicCards.json filter=lfs diff=lfs merge=lfs -text
 data/reddit/reddit_qa_dataset_with_context.csv filter=lfs diff=lfs merge=lfs -text
 data/rules_guru/rules_guru_qa_dataset.csv filter=lfs diff=lfs merge=lfs -text
 data/rag_vector_db/index.faiss filter=lfs diff=lfs merge=lfs -text
+data/rules_guru/rules_guru_qa_dataset_with_context.csv filter=lfs diff=lfs merge=lfs -text
