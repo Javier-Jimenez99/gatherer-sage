@@ -8,12 +8,14 @@ from transformers import (
     BitsAndBytesConfig,
     TrainingArguments,
 )
-from peft import LoraConfig
+from peft import LoraConfig, PeftModel
 from trl import SFTTrainer
 import wandb
 import evaluate
 import numpy as np
 from gatherer_sage.utils import clean_text
+import json
+import typer
 
 
 def dataset_gen(data, allow_system_role=True):
@@ -69,17 +71,15 @@ def create_datasets(
     num_samples: int = -1,
     allow_system_role: bool = True,
 ):
-    reddit_df = pd.read_csv(data_path).dropna()
-    reddit_df["question"] = reddit_df["question"].apply(clean_text)
-    reddit_df["answer"] = reddit_df["answer"].apply(clean_text)
-    reddit_df["context"] = reddit_df["context"].apply(clean_text)
+    df = pd.read_csv(data_path)[["question", "answer", "context"]].dropna()
+    df = df.map(clean_text)
 
     if num_samples > 0:
-        reddit_df = reddit_df.sample(num_samples, random_state=42)
+        df = df.sample(num_samples, random_state=42)
 
     dataset = Dataset.from_generator(
         dataset_gen,
-        gen_kwargs={"data": reddit_df, "allow_system_role": allow_system_role},
+        gen_kwargs={"data": df, "allow_system_role": allow_system_role},
     )
     dataset = dataset.train_test_split(test_size=0.2)
     train_dataset = dataset["train"]
@@ -97,20 +97,27 @@ def preprocess_logits_for_metrics(logits, labels):
     return pred_ids
 
 
-def main(
+def train(
     data_path: str = "data/reddit/reddit_qa_dataset_with_context.csv",
     model_path: str = "meta-llama/Meta-Llama-3-8B-Instruct",
+    pretrained_adapter_path: str = None,
     lora_rank: int = 256,
     lora_alpha_scale: float = 0.5,
     learning_rate: float = 2e-4,
+    wandb_entity: str = "javier-jimenez99",
+    wandb_project: str = "gatherer-sage",
+    sweep: str = True,
+    num_evals: int = 4,
 ):
-    wandb.init(project="gatherer-sage", entity="javier-jimenez99")
+    wandb.init(project=wandb_project, entity=wandb_entity)
     run_id = wandb.run.id
-    config = wandb.config
-    model_path = config.model_path
-    # lora_rank = config.lora_rank
-    lora_alpha_scale = config.lora_alpha_scale
-    # learning_rate = config.learning_rate
+
+    if sweep:
+        config = wandb.config
+        model_path = config.model_path
+        lora_rank = config.lora_rank
+        lora_alpha_scale = config.lora_alpha_scale
+        learning_rate = config.learning_rate
 
     if "llama" in model_path.lower():
         model_base_name = "llama"
@@ -160,6 +167,10 @@ def main(
     )
     model.config.use_cache = False
 
+    if pretrained_adapter_path is not None:
+        model = PeftModel.from_pretrained(model, pretrained_adapter_path)
+        model = model.merge_and_unload()
+
     peft_config = LoraConfig(
         lora_alpha=lora_alpha_scale * lora_rank,
         lora_dropout=0.05,
@@ -200,6 +211,18 @@ def main(
 
         return scores
 
+    per_device_train_batch_size = 2
+    gradient_accumulation_steps = 4
+    eval_steps = int(
+        (
+            len(train_dataset)
+            / (per_device_train_batch_size * gradient_accumulation_steps)
+        )
+        / num_evals
+    )
+
+    print(f"Eval steps: {eval_steps}")
+
     # Training Params
     args = TrainingArguments(
         output_dir=output_dir,
@@ -211,9 +234,9 @@ def main(
         gradient_checkpointing=True,
         optim="adamw_torch_fused",
         logging_steps=1,
-        eval_steps=100,
+        eval_steps=eval_steps,
         eval_strategy="steps",
-        save_steps=100,
+        save_steps=eval_steps,
         learning_rate=learning_rate,
         bf16=True,
         tf32=True,
@@ -249,28 +272,42 @@ def main(
 
     # Training
     trainer.train()
-    trainer.model.save_pretrained(f"{output_dir}/best_model")
     trainer.evaluate()
+    trainer.model.save_pretrained(f"{output_dir}/best_model")
 
 
-sweep_configuration = {
-    "method": "grid",
-    "name": "lora-exploration-llama",
-    "metric": {"goal": "maximize", "name": "eval/rougeL"},
-    "parameters": {
-        "lora_alpha_scale": {"values": [0.5]},
-        "model_path": {
-            "values": [
-                # "microsoft/Phi-3-small-8k-instruct",
-                # "google/gemma-1.1-7b-it",
-                "mistralai/Mistral-7B-Instruct-v0.3",
-                # "meta-llama/Meta-Llama-3-8B-Instruct",
-            ]
-        },
-    },
-}
+def main(
+    sweep_config_path: str = None,
+    wadnb_project: str = "gatherer-sage",
+    wandb_entity: str = "javier-jimenez99",
+    data_path: str = "data/rules_guru/rules_guru_qa_dataset_with_context.csv",
+    model_path: str = "mistralai/Mistral-7B-Instruct-v0.3",
+    pretrained_adapter_path: str = "model/mistral-gatherer-sage-v1/full_run/best_model",
+    lora_rank: int = 256,
+    lora_alpha_scale: float = 0.5,
+    learning_rate: float = 2e-4,
+):
+    if sweep_config_path is not None:
+        sweep_configuration = json.load(open(sweep_config_path, "r"))
+        sweep_id = wandb.sweep(
+            sweep=sweep_configuration,
+            project=wadnb_project,
+            entity=wandb_entity,
+        )
+        wandb.agent(sweep_id, function=train, entity=wandb_entity)
+    else:
+        train(
+            data_path=data_path,
+            model_path=model_path,
+            pretrained_adapter_path=pretrained_adapter_path,
+            lora_rank=lora_rank,
+            lora_alpha_scale=lora_alpha_scale,
+            learning_rate=learning_rate,
+            wandb_entity=wandb_entity,
+            wandb_project=wadnb_project,
+            sweep=False,
+        )
 
-sweep_id = wandb.sweep(
-    sweep=sweep_configuration, project="gatherer-sage", entity="javier-jimenez99"
-)
-wandb.agent(sweep_id, function=main, entity="javier-jimenez99")
+
+if __name__ == "__main__":
+    typer.run(main)

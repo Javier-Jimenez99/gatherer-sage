@@ -1,0 +1,33 @@
+{
+    "method": "grid",
+    "name": "lora-exploration-llama",
+    "metric": {
+        "goal": "maximize",
+        "name": "eval/rougeL"
+    },
+    "parameters": {
+        "lora_alpha_scale": {
+            "values": [
+                0.5,
+                1,
+                2
+            ]
+        },
+        "lora_rank": {
+            "values": [
+                32,
+                64,
+                128,
+                256
+            ]
+        },
+        "model_path": {
+            "values": [
+                "microsoft/Phi-3-small-8k-instruct",
+                "google/gemma-1.1-7b-it",
+                "mistralai/Mistral-7B-Instruct-v0.3",
+                "meta-llama/Meta-Llama-3-8B-Instruct"
+            ]
+        }
+    }
+}
