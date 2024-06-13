@@ -26,5 +26,14 @@ setuptools.setup(
         "wandb",
         "einops",  # phi
         "pytest",  # phi
+        "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git",
+        "xformers",
+        "bert-score",
+        "prometheus-eval",
+        "typer",
+        "vllm",
+        "peft",
+        "trl",
+        "pandas",
     ],
 )
