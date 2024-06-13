@@ -25,19 +25,21 @@ class RAG:
         chunk_size: int = 512,
         reranker_model_path="colbert-ir/colbertv2.0",
     ):
-
         embedding_model = HuggingFaceEmbeddings(
             model_name=embedding_model_path,
             multi_process=True,
-            model_kwargs={"device": "cuda"},
+            model_kwargs={"device": "cuda", "trust_remote_code": True},
             encode_kwargs={
                 "normalize_embeddings": True
             },  # Set `True` for cosine similarity
         )
 
-        self.reranker = RAGPretrainedModel.from_pretrained(
-            reranker_model_path, verbose=0
-        )
+        if reranker_model_path is not None:
+            self.reranker = RAGPretrainedModel.from_pretrained(
+                reranker_model_path, verbose=0
+            )
+        else:
+            self.reranker = None
 
         if vector_database_path is None:
 
@@ -113,23 +115,30 @@ class RAG:
     def store_db(self, vector_database_path: str):
         self.vector_database.save_local(vector_database_path)
 
-    def retrieve_context(
+    def retrieve_relevant_docs(
         self, question: str, num_retrieved_docs: int = 30, num_docs_final: int = 5
     ):
         relevant_docs = self.vector_database.similarity_search(
-            query=question, k=num_retrieved_docs
+            query=question,
+            k=num_retrieved_docs if self.reranker is not None else num_docs_final,
         )
         relevant_docs = [
             doc.page_content for doc in relevant_docs
         ]  # Keep only the text
 
-        if self.reranker:
+        if self.reranker is not None:
             relevant_docs = self.reranker.rerank(
                 question, relevant_docs, k=num_docs_final
             )
+
             relevant_docs = [doc["content"] for doc in relevant_docs]
 
-        relevant_docs = relevant_docs[:num_docs_final]
+            relevant_docs = relevant_docs[:num_docs_final]
+
+        return relevant_docs
+
+    def retrieve_context(self, **kwargs):
+        relevant_docs = self.retrieve_relevant_docs(**kwargs)
 
         context = "\nExtracted documents:\n"
         context += "".join(
@@ -140,8 +149,8 @@ class RAG:
 
 
 def main(
-    data_path: str = "data/reddit/reddit_qa_dataset.csv",
-    data_path_with_context: str = "data/reddit/reddit_qa_dataset_with_context.csv",
+    data_path: str = "data/huggingface/huggingface_qa_dataset.csv",
+    data_path_with_context: str = "data/huggingface/huggingface_qa_dataset_with_context.csv",
     vector_database_path: str = "data/rag_vector_db",
     batch_size: int = 50,
 ):
