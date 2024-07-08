@@ -5,8 +5,9 @@ import pandas as pd
 from transformers import pipeline
 from tqdm import tqdm
 from gatherer_sage.llm_judge import evaluate_generation
+from gatherer_sage.utils import gpu_cleaning
 import torch
-import gc
+import typer
 
 tqdm.pandas()
 
@@ -32,18 +33,31 @@ Question: {question}
 
 @torch.no_grad
 def main(
-    model_path: str = "model/mistral-gatherer-sage-v1/rules_guru_no_context_full/best_model",
-    data_path: str = "data/rules_guru/rules_guru_qa_dataset.csv",
+    model_path: str = "model/carbonbeagle-11b-truthy-gatherer-sage-v2/full_train/last_model",
+    data_path: str = "data/huge_corpus/test.csv",
     batch_size: int = 16,
+    rerank_model: str = "colbert-ir/colbertv2.0",
+    embedding_model: str = "mixedbread-ai/mxbai-embed-large-v1",
+    docs_retrieved: int = 10,
+    chunk_size: int = 128,
+    data_frac: float = 1,
 ):
     wandb.init(project=wandb_project, entity=wandb_entity)
     config = wandb.config
 
+    model_path = config.get("model_path", model_path)
+    data_path = config.get("data_path", data_path)
+    batch_size = config.get("batch_size", batch_size)
+    rerank_model = config.get("rerank_model", rerank_model)
+    embedding_model = config.get("embedding_model", embedding_model)
+    docs_retrieved = config.get("docs_retrieved", docs_retrieved)
+    chunk_size = config.get("chunk_size", chunk_size)
+
     print("==== Creating RAG...")
     rag = RAG(
-        embedding_model_path=config.embedding_model,
-        reranker_model_path=config.rerank_model,
-        chunk_size=config.chunk_size,
+        embedding_model_path=embedding_model,
+        reranker_model_path=rerank_model,
+        chunk_size=chunk_size,
     )
 
     print("==== Loading model...")
@@ -76,9 +90,13 @@ def main(
     )
 
     print("==== Retrieving context...")
-    df = pd.read_csv(data_path).sample(frac=0.1, random_state=42)
+    df = (
+        pd.read_csv(data_path)
+        .sample(frac=data_frac, random_state=42)
+        .rename(columns={"prompt": "question", "response": "answer"})
+    )
     df["context"] = df["question"].progress_apply(
-        lambda x: rag.retrieve_context(question=x, num_docs_final=config.docs_retrieved)
+        lambda x: rag.retrieve_context(question=x, num_docs_final=docs_retrieved)
     )
 
     df["input_text"] = df.apply(
@@ -97,9 +115,7 @@ def main(
     del tokenizer
     del llm_pipeline
     del rag
-    torch.cuda.empty_cache()
-    torch.cuda.synchronize()
-    gc.collect()
+    gpu_cleaning()
 
     print("==== Evaluating answers...")
     scores = evaluate_generation(dataset=df)
@@ -108,32 +124,79 @@ def main(
     print("==== Saving results...")
     wandb.log({"correctness": df["correctness"].mean()})
     wandb.log({"Scores Table": wandb.Table(dataframe=df)})
+    gpu_cleaning()
+
+
+def get_best_parameter(sweep_id, parameter_name):
+    api = wandb.Api()
+    sweep = api.sweep(sweep_id)
+    best_run = sweep.best_run()
+    return best_run.config[parameter_name]
+
+
+def run_sweep(parameter, sweep_config, sweep_id=None):
+    sweep_id = (
+        wandb.sweep(sweep_config, project=wandb_project, entity=wandb_entity)
+        if sweep_id is None
+        else sweep_id
+    )
+    wandb.agent(sweep_id, function=main)
+
+    return get_best_parameter(sweep_id, parameter)
 
 
 if __name__ == "__main__":
-    sweep_configuration = {
-        "method": "bayes",
-        "name": "generation-finetuning-sweep",
-        "metric": {"goal": "maximize", "name": "correctness"},
-        "parameters": {
-            "embedding_model": {
-                "values": [
-                    "thenlper/gte-large",
-                    "Alibaba-NLP/gte-large-en-v1.5",
-                    "mixedbread-ai/mxbai-embed-large-v1",
-                ]
-            },
-            "chunk_size": {"values": [128, 256, 512, 1024]},
-            "rerank_model": {
-                "values": [None, "colbert-ir/colbertv2.0", "jinaai/jina-colbert-v1-en"]
-            },
-            "docs_retrieved": {"values": [5, 7, 10]},
-        },
-    }
+    typer.run(main)
 
-    sweep_id = wandb.sweep(
-        sweep=sweep_configuration,
-        project=wandb_project,
-        entity=wandb_entity,
-    )
-    wandb.agent(sweep_id, function=main, entity=wandb_entity)
+    # sweep_configuration = {
+    #     "method": "grid",
+    #     "name": "generation-finetuning-sweep",
+    #     "metric": {"goal": "maximize", "name": "correctness"},
+    #     "parameters": {},
+    # }
+
+    # base_parameters = {
+    #     "model_path": {
+    #         "values": [
+    #             "model/mistral-gatherer-sage-v1/rules_guru_context_full/best_model"
+    #         ]
+    #     },
+    #     "docs_retrieved": {"values": [5]},
+    #     "chunk_size": {"values": [128]},
+    #     "embedding_model": {"values": ["thenlper/gte-large"]},
+    #     "rerank_model": {"values": [None]},
+    # }
+
+    # stages = {
+    #     "model_path": {
+    #         "values": [
+    #             "jakeboggs/MTG-Llama",
+    #             "TrevorJS/mtg-mistral-7b-instruct-sft-merged",
+    #             "model/mistral-gatherer-sage-v1/full_train_instruct/best_model",
+    #             "model/mistral-gatherer-sage-v1/rules_guru_context_full/best_model",
+    #         ]
+    #     },
+    #     "docs_retrieved": {"values": [5, 10, 15]},
+    #     "chunk_size": {"values": [512, 256, 128]},
+    #     "embedding_model": {
+    #         "values": [
+    #             "mixedbread-ai/mxbai-embed-large-v1",
+    #             "thenlper/gte-large",
+    #             "Alibaba-NLP/gte-large-en-v1.5",
+    #         ]
+    #     },
+    #     "rerank_model": {
+    #         "values": ["colbert-ir/colbertv2.0", None, "jinaai/jina-colbert-v1-en"]
+    #     },
+    # }
+
+    # for param, values in stages.items():
+    #     sweep_configuration["parameters"] = base_parameters
+    #     sweep_configuration["parameters"][param] = values
+
+    #     sweep_configuration["name"] = f"{param}-sweep"
+
+    #     best_value = run_sweep(param, sweep_configuration)
+    #     print(f"Best parameter for {param}: {best_value}")
+
+    #     base_parameters[param] = {"values": [best_value]}

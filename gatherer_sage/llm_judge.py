@@ -94,6 +94,14 @@ def metric_evaluation(
             response=x["generated_answer"],
             rubric=score_rubric,
             reference_answer=x["answer"],
+            params={
+                "max_tokens": 1024,
+                "repetition_penalty": 1.1,
+                "best_of": 1,
+                "temperature": 0.1,
+                "top_p": 0.95,
+                "top_k": 40,
+            },
         )[1],
         axis=1,
     ).tolist()

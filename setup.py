@@ -35,5 +35,6 @@ setuptools.setup(
         "peft",
         "trl",
         "pandas",
+        "apricot-select",
     ],
 )

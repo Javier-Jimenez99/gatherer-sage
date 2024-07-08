@@ -14,6 +14,7 @@ from gatherer_sage.utils import clean_text
 import json
 import typer
 from unsloth import FastLanguageModel
+from transformers import pipeline
 
 context_instruct_prompt = """<s>[INST] Using the information contained in the context, give a comprehensive and concise answer to the question.
 Respond only to the question asked, ensuring that the response is concise and relevant.
@@ -96,15 +97,57 @@ Question: {row['question']}""",
         yield {"messages": prompt}
 
 
-def create_datasets(
+simple_train_prompt = [
+    {
+        "role": "user",
+        "content": "{question}",
+    },
+    {
+        "role": "assistant",
+        "content": "{answer}",
+    },
+]
+
+simple_test_prompt = [
+    {
+        "role": "user",
+        "content": "{question}",
+    },
+]
+
+context_train_prompt = [
+    {
+        "role": "user",
+        "content": """Using the information contained in the context, give a comprehensive and concise answer to the question.
+Respond only to the question asked, ensuring that the response is concise and relevant.
+Provide the number of the rule when relevant.
+If the answer cannot be deduced from the context, do not give an answer.
+The questions are related with Magic The Gathering card game.   
+Context:
+{context}
+---
+Question: {question}
+""",
+    },
+    {
+        "role": "assistant",
+        "content": "Answer: {answer}",
+    },
+]
+
+
+def create_dataset(
+    tokenizer,
     data_path: str = "data/reddit/reddit_qa_dataset_with_context.csv",
     num_samples: int = -1,
-    allow_system_role: bool = True,
     use_context: bool = False,
+    question_column: str = "question",
+    answer_column: str = "answer",
+    context_column: str = "context",
 ):
-    usefull_columns = ["question", "answer"]
+    usefull_columns = [question_column, answer_column]
     if use_context:
-        usefull_columns.append("context")
+        usefull_columns.append(context_column)
 
     df = pd.read_csv(data_path)[usefull_columns].dropna()
     df = df.map(clean_text)
@@ -121,7 +164,7 @@ def create_datasets(
     #     messages = df.apply(
     #         lambda x: {
     #             "messages": [
-    #                 {"role": "user", "content": x["question"]},
+    #                 {"role": "user", "content": x[question_column]},
     #                 {"role": "assistant", "content": f"Answer: {x['answer']}"},
     #             ]
     #         },
@@ -129,28 +172,47 @@ def create_datasets(
     #     )
     #     dataset = Dataset.from_list(messages.tolist())
 
-    def formatting_prompts_func():
+    # def formatting_prompts_func():
+    #     for i, row in df.iterrows():
+    #         if use_context:
+    #             text = context_instruct_prompt.format(
+    #                 context=row[context_column],
+    #                 question=row[question_column],
+    #                 answer=row[answer_column],
+    #             )
+    #         else:
+    #             text = no_context_instruct_prompt.format(
+    #                 question=row[question_column], answer=row[answer_column]
+    #             )
+
+    #         yield {"text": text}
+
+    def prompt_generator():
+        prompt_template = tokenizer.apply_chat_template(
+            context_train_prompt if use_context else simple_train_prompt,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+
         for i, row in df.iterrows():
             if use_context:
-                text = context_instruct_prompt.format(
-                    context=row["context"],
-                    question=row["question"],
-                    answer=row["answer"],
+                text = prompt_template.format(
+                    context=row[context_column],
+                    question=row[question_column],
+                    answer=row[answer_column],
                 )
             else:
                 text = no_context_instruct_prompt.format(
-                    question=row["question"], answer=row["answer"]
+                    question=row[question_column], answer=row[answer_column]
                 )
 
             yield {"text": text}
 
-    dataset = Dataset.from_generator(formatting_prompts_func)
+    # dataset = dataset.train_test_split(test_size=0.1, seed=42)
+    # train_dataset = dataset["train"]
+    # test_dataset = dataset["test"]
 
-    dataset = dataset.train_test_split(test_size=0.1, seed=42)
-    train_dataset = dataset["train"]
-    test_dataset = dataset["test"]
-
-    return train_dataset, test_dataset
+    return Dataset.from_generator(prompt_generator)
 
 
 def preprocess_logits_for_metrics(logits, labels):
@@ -163,8 +225,11 @@ def preprocess_logits_for_metrics(logits, labels):
 
 
 def train(
-    data_path: str = "data/reddit/reddit_qa_dataset_with_context.csv",
-    model_path: str = "meta-llama/Meta-Llama-3-8B-Instruct",
+    train_data_path: str = "data/huge_corpus/train.csv",
+    train_num_samples: int = -1,
+    test_data_path: str = "data/huge_corpus/test.csv",
+    test_num_samples: int = -1,
+    model_path: str = "vicgalle/CarbonBeagle-11B-truthy",
     pretrained_adapter_path: str = None,
     lora_rank: int = 256,
     lora_alpha_scale: float = 0.5,
@@ -174,9 +239,14 @@ def train(
     sweep: str = True,
     eval_ratio: float = 0.1,
     use_context: bool = False,
-    batch_size: int = 2,
+    batch_size: int = 16,
     run_id: str = None,
     generate_during_eval: bool = False,
+    packing: bool = True,
+    epochs: int = 2,
+    question_column: str = "prompt",
+    answer_column: str = "response",
+    context_column: str = "context",
 ):
     base_run_id = run_id
     if base_run_id is not None:
@@ -190,41 +260,14 @@ def train(
 
     if sweep:
         config = wandb.config
-        model_path = config.model_path
-        lora_rank = config.lora_rank
-        lora_alpha_scale = config.lora_alpha_scale
-        learning_rate = config.learning_rate
+        model_path = config.get("model_path", model_path)
+        lora_rank = config.get("lora_rank", lora_rank)
+        lora_alpha_scale = config.get("lora_alpha_scale", lora_alpha_scale)
+        learning_rate = config.get("learning_rate", learning_rate)
 
-    if "llama" in model_path.lower():
-        model_base_name = "llama"
-    elif "phi" in model_path.lower():
-        model_base_name = "phi"
-    elif "gemma" in model_path.lower():
-        model_base_name = "gemma"
-    elif "mistral" in model_path.lower():
-        model_base_name = "mistral"
-    else:
-        model_base_name = "model"
+    model_base_name = model_path.split("/")[1]
 
-    output_dir = f"./model/{model_base_name}-gatherer-sage-v1/{run_id}"
-
-    train_dataset, test_dataset = create_datasets(
-        data_path,
-        num_samples=-1,
-        allow_system_role=model_base_name in ["llama", "phi"],
-        use_context=use_context,
-    )
-
-    # BitsAndBytesConfig int-4 config
-    if "bnb-4bit" not in model_path.lower():
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.bfloat16,
-        )
-    else:
-        bnb_config = None
+    output_dir = f"./model/{model_base_name.lower()}-gatherer-sage-v2/{run_id}"
 
     max_seq_length = 2048
 
@@ -265,6 +308,7 @@ def train(
         "llama" in model_path.lower()
         or "mistral" in model_path.lower()
         or "phi" in model_path.lower()
+        or "beagle" in model_path.lower()
     ):
         tokenizer.pad_token = tokenizer.eos_token
         model.generation_config.pad_token_id = tokenizer.pad_token_id
@@ -313,21 +357,45 @@ def train(
 
         return scores
 
+    train_dataset = create_dataset(
+        tokenizer=tokenizer,
+        data_path=train_data_path,
+        num_samples=train_num_samples,
+        use_context=use_context,
+        question_column=question_column,
+        answer_column=answer_column,
+        context_column=context_column,
+    )
+
+    if test_data_path is None:
+        test_dataset = None
+    else:
+        test_dataset = create_dataset(
+            tokenizer=tokenizer,
+            data_path=test_data_path,
+            num_samples=test_num_samples,
+            use_context=use_context,
+            question_column=question_column,
+            answer_column=answer_column,
+            context_column=context_column,
+        )
+
     gradient_accumulation_steps = 4
 
     # Training Params
     args = TrainingArguments(
         output_dir=output_dir,
-        num_train_epochs=3,
-        per_device_train_batch_size=batch_size,
-        per_device_eval_batch_size=batch_size,
+        num_train_epochs=epochs,
+        # per_device_train_batch_size=batch_size,
+        # per_device_eval_batch_size=batch_size,
+        auto_find_batch_size=True,
         eval_accumulation_steps=1,
         gradient_accumulation_steps=gradient_accumulation_steps,
         gradient_checkpointing=True,
         optim="adamw_8bit",
         logging_steps=1,
         eval_steps=eval_ratio,
-        eval_strategy="steps",
+        eval_strategy="steps" if test_dataset is not None else "no",
         save_steps=eval_ratio,
         learning_rate=learning_rate,
         fp16=not torch.cuda.is_bf16_supported(),
@@ -336,13 +404,12 @@ def train(
         warmup_ratio=0.03,
         lr_scheduler_type="cosine",
         report_to="wandb",
-        load_best_model_at_end=True,
-        metric_for_best_model="loss",
-        greater_is_better=False,
+        load_best_model_at_end=False,
+        # metric_for_best_model="loss",
+        # greater_is_better=False,
         save_total_limit=2,  # Save two in case there is an old one better
     )
 
-    # Define una función para generar ejemplos de texto y loggearlos en una tabla
     def log_examples(model, tokenizer, step):
         inputs = [
             "Addyson casts Lightning Bolt targeting Nico. As it resolves, can Addyson choose to deal the damage to Nico's Karn, Scion of Urza?",
@@ -367,8 +434,15 @@ def train(
 
         table = wandb.Table(columns=["Prompt", "Generated Text"])
 
+        prompt_template = tokenizer.apply_chat_template(
+            simple_test_prompt,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
         for input_text in inputs:
-            inputs_ids = tokenizer(input_text, return_tensors="pt").to(model.device)
+            inputs_ids = tokenizer(
+                prompt_template.format(question=input_text), return_tensors="pt"
+            ).to(model.device)
             model.generation_config.pad_token_id = tokenizer.pad_token_id
             outputs = model.generate(**inputs_ids, max_length=max_seq_length)
             generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
@@ -392,7 +466,7 @@ def train(
         max_seq_length=max_seq_length,
         tokenizer=tokenizer,
         compute_metrics=compute_metrics,
-        packing=False,
+        packing=packing,
         callbacks=[EvaluationLoggingCallback] if generate_during_eval else [],
         preprocess_logits_for_metrics=preprocess_logits_for_metrics,
         dataset_text_field="text",
@@ -400,24 +474,28 @@ def train(
 
     # Training
     trainer.train(resume_from_checkpoint=base_run_id is not None)
+    trainer.model.save_pretrained(f"{output_dir}/last_model")
     trainer.evaluate()
-    trainer.model.save_pretrained(f"{output_dir}/best_model")
 
 
 def main(
-    sweep_config_path: str = None,
+    sweep_config_path: str = None,  # "sweep_config.json",
     wadnb_project: str = "gatherer-sage",
     wandb_entity: str = "javier-jimenez99",
-    data_path: str = "data/rules_guru/rules_guru_qa_dataset_with_context.csv",  # "data/pretrain_qa_dataset.csv",
-    model_path: str = "TrevorJS/mtg-mistral-7b-instruct-sft-merged",  # "unsloth/mistral-7b-instruct-v0.3-bnb-4bit",
-    pretrained_adapter_path: str = "model/mistral-gatherer-sage-v1/full_train_instruct/best_model",  # "model/mistral-gatherer-sage-v1/trevor_full/best_model",
+    train_data_path: str = "data/study/huge_corpus/train_ifd_20_div.csv",
+    train_num_samples: int = -1,
+    test_data_path: str = "data/huge_corpus/test.csv",
+    test_num_samples: int = -1,
+    model_path: str = "vicgalle/CarbonBeagle-11B-truthy",
+    pretrained_adapter_path: str = None,  # "model/mistral-gatherer-sage-v1/trevor_full/best_model",
     generate_during_eval: bool = False,
-    lora_rank: int = 256,
+    lora_rank: int = 16,  # 256,
     lora_alpha_scale: float = 0.5,
     learning_rate: float = 2e-4,
     use_context: bool = False,
     batch_size: int = 16,
     run_id: str = None,  # "y1lel8qp",
+    epochs: int = 2,
 ):
     if sweep_config_path is not None:
         sweep_configuration = json.load(open(sweep_config_path, "r"))
@@ -429,7 +507,10 @@ def main(
         wandb.agent(sweep_id, function=train, entity=wandb_entity)
     else:
         train(
-            data_path=data_path,
+            train_data_path=train_data_path,
+            train_num_samples=train_num_samples,
+            test_data_path=test_data_path,
+            test_num_samples=test_num_samples,
             model_path=model_path,
             pretrained_adapter_path=pretrained_adapter_path,
             lora_rank=lora_rank,
@@ -442,6 +523,7 @@ def main(
             batch_size=batch_size,
             run_id=run_id,
             generate_during_eval=generate_during_eval,
+            epochs=epochs,
         )
 
 

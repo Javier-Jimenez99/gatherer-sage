@@ -2,7 +2,8 @@ from PyPDF2 import PdfReader
 import pandas as pd
 import json
 import numpy as np
-
+import torch
+import gc
 
 import re
 from html import unescape
@@ -251,3 +252,9 @@ def card_texts(cards_df):
             all_texts.append(clean_text(input_text))
 
     return all_texts
+
+
+def gpu_cleaning():
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
+    gc.collect()
