@@ -161,4 +161,4 @@ cython_debug/
 results_modified/
 wandb/
 model/
-!dataset/reddit/*.csv
+data/reddit/*.csv
