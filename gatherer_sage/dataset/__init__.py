@@ -1,1 +1,2 @@
 from gatherer_sage.dataset.superfiltering import superfiltering, diversity
+from gatherer_sage.dataset.full_corpus import generate_full_corpus
