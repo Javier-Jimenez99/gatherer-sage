@@ -13,6 +13,36 @@ And so, Gatherer Sage came to life! Initially, the goal was to create an AI that
 
 ---
 
+## 📜 Table of Contents
+
+1. [Overview](#overview)
+2. [Dataset](#dataset)
+
+---
+
+## 1. 🔍 Overview
+
+Gatherer Sage is an AI-powered project that leverages the power of **transformer-based models** (think GPT) to understand and interact with **Magic: The Gathering** data. It's trained on card text, set details, and other Magic metadata to provide insights and even assist in decision-making within the game.
+
+This project is still in its early stages, but the dream is for it to eventually:
+- Help with **draft strategies** based on current metas.
+- Assist in **deck-building** with synergy suggestions and balance recommendations.
+- Help with **rulings** during casual games.
+- Analyze **game states** to give actionable tips during matches.
+- And much more!
+
+---
+
+## 2. 📊 Dataset
+### 2.1. Reddit QA Dataset
+I have created a dataset that contains **~12.8K** questions asked in the [r/mtgrules](https://www.reddit.com/r/mtgrules/) subreddit from September 1, 2019, to December 31, 2022. It primarily focuses on card rulings and interactions in **Magic: The Gathering** 🧙‍♂️✨.
+
+The dataset has been filtered to include only question-answer pairs where the answers have at least 1 upvote. If multiple answers were available, the one with the highest vote count was selected.
+
+The raw data is available in the [./data/reddit/](./data/reddit/) folder, and the processed dataset can be obtained from [Javier-Jimenez99/reddit_mtgrules_qa](https://huggingface.co/datasets/Javier-Jimenez99/reddit_mtgrules_qa).
+
+---
+
 📚 You can find a list of resources that were helpful during the development of this project in the [useful-resources.md](./useful-resources.md) file.
 
 ## Setup
