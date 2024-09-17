@@ -162,3 +162,4 @@ results_modified/
 wandb/
 model/
 data/reddit/*.csv
+data/huge_corpus/
