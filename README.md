@@ -39,7 +39,7 @@ I have created a dataset that contains **~12.8K** questions asked in the [r/mtgr
 
 The dataset has been filtered to include only question-answer pairs where the answers have at least 1 upvote. If multiple answers were available, the one with the highest vote count was selected.
 
-The raw data is available in the [./data/reddit/](./data/reddit/) folder, and the processed dataset can be obtained from [Javier-Jimenez99/reddit_mtgrules_qa](https://huggingface.co/datasets/Javier-Jimenez99/reddit_mtgrules_qa).
+The raw data is available in the [./data/reddit/](./data/reddit/) folder, and the processed dataset can be obtained from [Javier-Jimenez99/reddit-mtgrules-qa](https://huggingface.co/datasets/Javier-Jimenez99/reddit-mtgrules-qa).
 
 ---
 
