@@ -51,7 +51,7 @@ def generate_full_corpus() -> pd.DataFrame:
 
     df_mtgjudge = load_dataset("Javier-Jimenez99/reddit_mtgrules_qa")
     df = pd.DataFrame(concatenate_datasets([v for v in df_mtgjudge.values()]))
-    df["dataset_name"] = "Javier-Jimenez99/reddit_mtgrules_qa"
+    df["dataset_name"] = "Javier-Jimenez99/reddit-mtgrules-qa"
     all_df.append(df)
 
     df_rules_guru = pd.read_csv("../data/rules_guru/rules_guru_qa_dataset.csv").rename(
