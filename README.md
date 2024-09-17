@@ -41,6 +41,36 @@ The dataset has been filtered to include only question-answer pairs where the an
 
 The raw data is available in the [./data/reddit/](./data/reddit/) folder, and the processed dataset can be obtained from [Javier-Jimenez99/reddit-mtgrules-qa](https://huggingface.co/datasets/Javier-Jimenez99/reddit-mtgrules-qa).
 
+### 2.2. Full Corpus
+The full corpus used for training the model includes **145K** question-answer pairs from multiple sources, including:
+1. **[nelsntk/mtg-data](https://huggingface.co/datasets/nelsntk/mtg-data)**
+2. **[jakeboggs/MTG-Eval](https://huggingface.co/datasets/jakeboggs/MTG-Eval)**
+3. **[RiverTest/Testmtg](https://huggingface.co/datasets/RiverTest/Testmtg)**
+4. **[TrevorJS/mtg-rules-qa](https://huggingface.co/datasets/TrevorJS/mtg-rules-qa)**
+5. **[Javier-Jimenez99/reddit-mtgrules-qa](https://huggingface.co/datasets/Javier-Jimenez99/reddit-mtgrules-qa)**
+
+This is the distribution of the dataset:
+
+![Dataset distribution](media/dataset_distribution.png)
+
+I have proyected all the data using PCA algorithm to visualize it in 2D. After applying K-means algorithm to the data, I have obtained clearly defined clusters. This shows that the data is well distributed and the model will be able to learn from different sources.
+
+![Dataset clusters](media/dataset_clusters.png)
+
+### 2.3. Dataset Versions and Filtering
+
+To accommodate various research needs and computational resources, we have created multiple versions of the dataset containing **145K**, **70K**, **35K**, and **10K** question-answer pairs. To reduce the dataset size while maintaining high quality and diversity, we employed a method called **Superfiltering-D**, which is a combination of superfiltering and a diversity filter.
+
+- **Superfiltering:** Is a data preprocessing technique desribed in the paper [Superfiltering: Weak-to-Strong Data Filtering for Fast Instruction-Tuning](https://github.com/tianyi-lab/Superfiltering). It selects high-quality data for instruction tuning by leveraging **weaker language models** (like GPT-2) to filter data that will be used to fine-tune stronger models. The key insight is that while weak and strong models differ greatly in their overall performance, they show consistent ability in ranking the difficulty of instructions.
+
+- **Diversity Filter:** Using **Facility Location**, it ensures that the dataset maintains a broad range of topics and scenarios within the MTG domain. By filtering out overly similar question-answer pairs, it increases the variety and richness of the dataset, which is beneficial for training models that generalize well across different types of queries.
+
+The filtered datasets are available in:
+- **[Javier-Jimenez99/mtg-qa-145K-corpus](https://huggingface.co/datasets/Javier-Jimenez99/mtg-qa-145K-corpus)**
+- **[Javier-Jimenez99/mtg-qa-70K-corpus](https://huggingface.co/datasets/Javier-Jimenez99/mtg-qa-70K-corpus)**
+- **[Javier-Jimenez99/mtg-qa-35K-corpus](https://huggingface.co/datasets/Javier-Jimenez99/mtg-qa-35K-corpus)**
+- **[Javier-Jimenez99/mtg-qa-10K-corpus](https://huggingface.co/datasets/Javier-Jimenez99/mtg-qa-10K-corpus)**
+
 ---
 
 📚 You can find a list of resources that were helpful during the development of this project in the [useful-resources.md](./useful-resources.md) file.
