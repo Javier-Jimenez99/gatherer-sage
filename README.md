@@ -49,10 +49,6 @@ The full corpus used for training the model includes **145K** question-answer pa
 4. **[TrevorJS/mtg-rules-qa](https://huggingface.co/datasets/TrevorJS/mtg-rules-qa)**
 5. **[Javier-Jimenez99/reddit-mtgrules-qa](https://huggingface.co/datasets/Javier-Jimenez99/reddit-mtgrules-qa)**
 
-This is the distribution of the dataset:
-
-![Dataset distribution](media/dataset_distribution.png)
-
 I have proyected all the data using PCA algorithm to visualize it in 2D. After applying K-means algorithm to the data, I have obtained clearly defined clusters. This shows that the data is well distributed and the model will be able to learn from different sources.
 
 ![Dataset clusters](media/dataset_clusters.png)
