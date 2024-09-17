@@ -10,7 +10,7 @@ def generate_full_corpus() -> pd.DataFrame:
     - jakeboggs/MTG-Eval
     - RiverTest/Testmtg
     - TrevorJS/mtg-rules-qa
-    - Javier-Jimenez99/reddit_mtgrules_qa
+    - Javier-Jimenez99/reddit-mtgrules-qa
     - rules-guru
 
     Returns
@@ -49,7 +49,7 @@ def generate_full_corpus() -> pd.DataFrame:
     df["dataset_name"] = "TrevorJS/mtg-rules-qa"
     all_df.append(df)
 
-    df_mtgjudge = load_dataset("Javier-Jimenez99/reddit_mtgrules_qa")
+    df_mtgjudge = load_dataset("Javier-Jimenez99/reddit-mtgrules-qa")
     df = pd.DataFrame(concatenate_datasets([v for v in df_mtgjudge.values()]))
     df["dataset_name"] = "Javier-Jimenez99/reddit-mtgrules-qa"
     all_df.append(df)

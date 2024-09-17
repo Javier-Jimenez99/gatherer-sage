@@ -234,6 +234,8 @@ def diversity(
         The filtered corpus.
     """
 
+    df = df.copy()
+
     model = SentenceTransformer(embeddings_model)
 
     embeddings = model.encode(
