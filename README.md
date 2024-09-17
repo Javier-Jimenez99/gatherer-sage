@@ -67,6 +67,8 @@ The filtered datasets are available in:
 - **[Javier-Jimenez99/mtg-qa-35K-corpus](https://huggingface.co/datasets/Javier-Jimenez99/mtg-qa-35K-corpus)**
 - **[Javier-Jimenez99/mtg-qa-10K-corpus](https://huggingface.co/datasets/Javier-Jimenez99/mtg-qa-10K-corpus)**
 
+Here is my [nomic.ai](https://atlas.nomic.ai/data/javijj99) account, where you can see super cool plots of the datasets I have created ✨.
+
 ---
 
 📚 You can find a list of resources that were helpful during the development of this project in the [useful-resources.md](./useful-resources.md) file.
