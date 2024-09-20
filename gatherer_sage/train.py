@@ -1,5 +1,5 @@
 import pandas as pd
-from datasets import Dataset
+from datasets import Dataset, load_dataset
 import torch
 from transformers import (
     TrainerCallback,
@@ -149,8 +149,14 @@ def create_dataset(
     if use_context:
         usefull_columns.append(context_column)
 
-    df = pd.read_csv(data_path)[usefull_columns].dropna()
-    df = df.map(clean_text)
+    try:
+        ds = load_dataset(data_path)
+        df = pd.DataFrame(ds["train"])
+    except Exception as e:
+        print(e)
+        df = pd.read_csv(data_path)[usefull_columns]
+
+    df = df.dropna().map(clean_text)
 
     if num_samples > 0:
         df = df.sample(num_samples, random_state=42)
@@ -247,14 +253,19 @@ def train(
     question_column: str = "prompt",
     answer_column: str = "response",
     context_column: str = "context",
+    wandb_run_name: str = None,
 ):
     base_run_id = run_id
     if base_run_id is not None:
         wandb.init(
-            project=wandb_project, entity=wandb_entity, id=base_run_id, resume="allow"
+            project=wandb_project,
+            entity=wandb_entity,
+            id=base_run_id,
+            resume="allow",
+            name=wandb_run_name,
         )
     else:
-        wandb.init(project=wandb_project, entity=wandb_entity)
+        wandb.init(project=wandb_project, entity=wandb_entity, name=wandb_run_name)
 
     run_id = wandb.run.id
 
@@ -482,7 +493,7 @@ def main(
     sweep_config_path: str = None,  # "sweep_config.json",
     wadnb_project: str = "gatherer-sage",
     wandb_entity: str = "javier-jimenez99",
-    train_data_path: str = "data/study/huge_corpus/train_ifd_20_div.csv",
+    train_data_path: str = "Javier-Jimenez99/mtg-qa-70K-corpus",  # "data/study/huge_corpus/train_ifd_20_div.csv",
     train_num_samples: int = -1,
     test_data_path: str = "data/huge_corpus/test.csv",
     test_num_samples: int = -1,
@@ -496,6 +507,7 @@ def main(
     batch_size: int = 16,
     run_id: str = None,  # "y1lel8qp",
     epochs: int = 2,
+    wandb_run_name: str = "carbonbeagle-11B-corpus-70K",
 ):
     if sweep_config_path is not None:
         sweep_configuration = json.load(open(sweep_config_path, "r"))
@@ -524,6 +536,7 @@ def main(
             run_id=run_id,
             generate_during_eval=generate_during_eval,
             epochs=epochs,
+            wandb_run_name=wandb_run_name,
         )
 
 
