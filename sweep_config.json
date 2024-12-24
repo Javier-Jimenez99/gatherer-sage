@@ -1,32 +1,21 @@
 {
     "method": "grid",
-    "name": "lora-exploration-llama",
+    "name": "huge_corpus_test",
     "metric": {
-        "goal": "maximize",
-        "name": "eval/rougeL"
+        "goal": "minimize",
+        "name": "train/loss"
     },
     "parameters": {
-        "lora_alpha_scale": {
-            "values": [
-                0.5,
-                1,
-                2
-            ]
-        },
-        "lora_rank": {
-            "values": [
-                32,
-                64,
-                128,
-                256
-            ]
-        },
         "model_path": {
             "values": [
-                "microsoft/Phi-3-small-8k-instruct",
-                "google/gemma-1.1-7b-it",
-                "mistralai/Mistral-7B-Instruct-v0.3",
-                "meta-llama/Meta-Llama-3-8B-Instruct"
+                "lmsys/vicuna-13b-v1.5",
+                "jan-hq/stealth-v2",
+                "upstage/SOLAR-10.7B-Instruct-v1.0",
+                "vicgalle/CarbonBeagle-11B-truthy",
+                "unsloth/llama-3-8b-Instruct-bnb-4bit",
+                "unsloth/mistral-7b-instruct-v0.3-bnb-4bit",
+                "unsloth/gemma-7b-it-bnb-4bit",
+                "unsloth/Phi-3-medium-4k-instruct-bnb-4bit"
             ]
         }
     }

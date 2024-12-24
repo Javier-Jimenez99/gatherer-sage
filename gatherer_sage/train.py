@@ -493,7 +493,7 @@ def main(
     sweep_config_path: str = None,  # "sweep_config.json",
     wadnb_project: str = "gatherer-sage",
     wandb_entity: str = "javier-jimenez99",
-    train_data_path: str = "Javier-Jimenez99/mtg-qa-70K-corpus",  # "data/study/huge_corpus/train_ifd_20_div.csv",
+    train_data_path: str = "Javier-Jimenez99/mtg-qa-145K-corpus",  # "data/study/huge_corpus/train_ifd_20_div.csv",
     train_num_samples: int = -1,
     test_data_path: str = "data/huge_corpus/test.csv",
     test_num_samples: int = -1,
@@ -507,7 +507,7 @@ def main(
     batch_size: int = 16,
     run_id: str = None,  # "y1lel8qp",
     epochs: int = 2,
-    wandb_run_name: str = "carbonbeagle-11B-corpus-70K",
+    wandb_run_name: str = "carbonbeagle-11B-corpus-145K",
 ):
     if sweep_config_path is not None:
         sweep_configuration = json.load(open(sweep_config_path, "r"))
