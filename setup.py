@@ -16,6 +16,7 @@ setuptools.setup(
         "torch",
         "huggingface_hub",
         "langchain_community",
+        "langchain-groq",
         "sentence-transformers",
         "faiss-gpu",
         "bitsandbytes",
@@ -36,5 +37,6 @@ setuptools.setup(
         "trl",
         "pandas",
         "apricot-select",
+        "ragas"
     ],
 )
