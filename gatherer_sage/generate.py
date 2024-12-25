@@ -41,7 +41,7 @@ def main(model_path:str, input_path:str, output_path:str,batch_size:int=16):
         for i, row in tqdm(dataframe.iterrows(), total=len(dataframe)):
             model_call = chain.invoke(row["user_input"])
             dataframe.at[i, "response"] = model_call
-            time.sleep(1)
+            time.sleep(2.5)
 
         dataframe.to_csv(output_path, index=False)
     else:
