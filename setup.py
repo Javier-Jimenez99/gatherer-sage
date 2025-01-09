@@ -21,22 +21,24 @@ setuptools.setup(
         "faiss-gpu",
         "bitsandbytes",
         "accelerate",
-        "ragatouille",
+        # "ragatouille",
         "evaluate",
         "rouge_score",
         "wandb",
         "einops",  # phi
         "pytest",  # phi
-        "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git",
+        # "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git",
+        "unsloth",
         "xformers",
         "bert-score",
-        "prometheus-eval",
+        # "prometheus-eval",
         "typer",
         "vllm",
         "peft",
         "trl",
         "pandas",
         "apricot-select",
-        "ragas"
+        "ragas",
+        "langchain-huggingface",
     ],
 )
